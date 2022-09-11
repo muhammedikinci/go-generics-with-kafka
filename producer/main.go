@@ -2,9 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-	"os"
+	"net"
 	"strconv"
+
+	"github.com/segmentio/kafka-go"
 )
 
 func main() {
@@ -92,16 +93,27 @@ func main() {
 		},
 	}
 
-	producer, err := GetNewProducer()
+	productTopic := "producer-product-table-testing"
+	categoryTopic := "producer-category-table-testing"
+	imageTopic := "producer-image-table-testing"
+
+	connection, err := kafka.Dial("tcp", net.JoinHostPort("localhost", "9092"))
 
 	if err != nil {
-		fmt.Println("Failed to create producer: %s \n", err)
-		os.Exit(1)
+		panic(err.Error())
 	}
 
-	productTopic := "testing.producer-product-table-testing"
-	categoryTopic := "testing.producer-category-table-testing"
-	imageTopic := "testing.producer-image-table-testing"
+	productTopicConfig := kafka.TopicConfig{Topic: productTopic, NumPartitions: 1, ReplicationFactor: 1}
+	categoryTopicConfig := kafka.TopicConfig{Topic: categoryTopic, NumPartitions: 1, ReplicationFactor: 1}
+	imageTopicConfig := kafka.TopicConfig{Topic: imageTopic, NumPartitions: 1, ReplicationFactor: 1}
+
+	err = connection.CreateTopics(productTopicConfig, categoryTopicConfig, imageTopicConfig)
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	producer := NewProducer()
 
 	for _, product := range products {
 		marsheledProduct, _ := json.Marshal(product)
